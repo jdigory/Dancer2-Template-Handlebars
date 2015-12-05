@@ -1,4 +1,4 @@
-package Dancer::Template::Handlebars::Helpers;
+package Dancer2::Template::Handlebars::Helpers;
 # ABSTRACT: parent class for Handlebars' helper collections
 
 
@@ -27,7 +27,7 @@ __END__
 
     package MyApp::HandlebarsHelpers;
 
-    use parent Dancer::Template::Handlebars::Helpers;
+    use parent Dancer2::Template::Handlebars::Helpers;
 
     sub shout :Helper {
         my( $context, $text ) = @_;
@@ -41,7 +41,7 @@ __END__
 
     1;
 
-and then in the Dancer app config.yml:
+and then in the Dancer2 app config.yml:
 
     engines:
         handlebars:
@@ -59,7 +59,7 @@ Behind the curtain, what the attribute does is to add the
 tagged functions to a module-wide C<%HANDLEBARS_HELPERS> variable,
 which has the function names as keys and their coderefs as values.
 For example, to register the functions of the SYNOPSIS
-without the help of C<Dancer::Template::Handlebars::Helpers>, one could do:
+without the help of C<Dancer2::Template::Handlebars::Helpers>, one could do:
 
     package MyApp::HandlebarsHelpers;
 

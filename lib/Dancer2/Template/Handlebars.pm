@@ -1,4 +1,4 @@
-package Dancer::Template::Handlebars;
+package Dancer2::Template::Handlebars;
 # ABSTRACT: Wrapper for the Handlebars template system
 
 =head1 SYNOPSIS
@@ -58,7 +58,7 @@ The default extension for Handlebars templates is 'C<hbs>'.
 
 Handlebars helper functions can be defined in modules, which are
 passed via C<helper_modules> in the configuration. See
-L<Dancer::Template::Handlebars::Helpers> for more details on how to register
+L<Dancer2::Template::Handlebars::Helpers> for more details on how to register
 the functions themselves.
 
 =head2 Layouts
@@ -80,18 +80,18 @@ Example of a perfectly valid, if slightly boring, layout:
 use strict;
 use warnings;
 
-use Dancer::Config 'setting';
+use Dancer2::Config 'setting';
 
 use Text::Handlebars;
 
 use Moo;
-extends 'Dancer::Template::Abstract';
+extends 'Dancer2::Template::Abstract';
 
 has views_root => (
     is => 'ro',
     lazy => 1,
     default => sub {
-        Dancer::App->current->setting('views')
+        Dancer2::App->current->setting('views')
     },
 );
 
@@ -159,17 +159,17 @@ sub view {
 sub layout {
     my ($self, $layout, $tokens, $content) = @_;
 
-    my $dir = Dancer::App->current->setting('views');
+    my $dir = Dancer2::App->current->setting('views');
     my( $layout_name ) = grep { -e join '/', $dir, $_ }
                           map { 'layouts/'.$_ } $self->_template_name($layout);
 
     my $full_content;
     if (-e join '/', $dir, $layout_name ) {
-        $full_content = Dancer::Template->engine->render(
+        $full_content = Dancer2::Template->engine->render(
                                      $layout_name, {%$tokens, content => $content});
     } else {
         $full_content = $content;
-        Dancer::Logger::error("Defined layout ($layout) was not found!");
+        Dancer2::Logger::error("Defined layout ($layout) was not found!");
     }
     $full_content;
 }
@@ -196,11 +196,3 @@ sub render {
 1;
 
 __END__
-
-=head1 SEE ALSO
-
-=over
-
-=item L<Dancer::Template::Mustache> - similar Dancer wrapper for L<Template::Mustache>.
-
-=back
