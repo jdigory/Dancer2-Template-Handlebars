@@ -3,7 +3,7 @@ package MyHelpers;
 use strict;
 use warnings;
 
-use parent 'Dancer::Template::Handlebars::Helpers';
+use parent 'Dancer2::Template::Handlebars::Helpers';
 
 sub shout :Helper { uc $_[1] }
 

@@ -8,7 +8,7 @@ use Test::More tests => 1;
 
     use lib 't/lib';
 
-    use Dancer ':syntax';
+    use Dancer2 ':syntax';
 
     set views => 't/views';
     set layout => 'layout';
@@ -35,7 +35,7 @@ use Test::More tests => 1;
 
 }
 
-use Dancer::Test appdir => 't';
+use Dancer2::Test appdir => 't';
 
 response_content_like '/' => qr/!!! \s+ hello \s there, \s world \s+ !!!/xi, 'basic layout';
 

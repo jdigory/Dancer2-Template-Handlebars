@@ -8,7 +8,7 @@ use Test::More tests => 4;
 
     use lib 't/lib';
 
-    use Dancer ':syntax';
+    use Dancer2 ':syntax';
 
     set views => 't/views';
     config->{views} = 't/views';
@@ -51,7 +51,7 @@ use Test::More tests => 4;
 
 }
 
-use Dancer::Test appdir => 't';
+use Dancer2::Test appdir => 't';
 
 response_content_is '/string' => 'hello world', 'string ref';
 
