@@ -1,198 +1,61 @@
 package Dancer2::Template::Handlebars;
-# ABSTRACT: Wrapper for the Handlebars template system
-
-=head1 SYNOPSIS
-
-    # in config.yml
-   template: handlebars
-
-   engines:
-        handlebars:
-            helper_modules:
-                - MyApp::HandlebarsHelpers
-
-   # in the app
-   get '/style/:style' => sub {
-       template 'style' => {
-           style => param('style')
-       };
-   };
-
-   # in views/style.mustache
-   That's a nice, manly {{style}} mustache you have there!
-
-
-=head1 DESCRIPTION
-
-Wrapper for L<Text::Handlebars>, the Perl implementation of the Handlebars
-templating system.
-
-=head2 Configuration
-
-The arguments passed to the 'handlebars' engine are given directly to the
-L<Text::Handlebars> constructor, 
-with the exception of C<helper_modules> (see below for details).
-
-=head2 Calls to 'template()'
-
-When calling C<template>, one can use a filename as usual, or can pass a 
-string reference, which will treated as the template itself.
-
-    get '/file' => sub {
-        # look for the file views/my_template.hbs
-        template 'my_template', {
-            name => 'Bob',
-        };
-    };
-
-    get '/string' => sub {
-        # provide the template directly
-        template \'hello there {{name}}', {
-            name => 'Bob',
-        };
-    };
-
-The default extension for Handlebars templates is 'C<hbs>'.
-
-=head2 Helper Functions
-
-Handlebars helper functions can be defined in modules, which are
-passed via C<helper_modules> in the configuration. See
-L<Dancer2::Template::Handlebars::Helpers> for more details on how to register
-the functions themselves.
-
-=head2 Layouts
-
-Layouts are supported. The content of the inner template will
-be available via the 'content' variable. 
-
-Example of a perfectly valid, if slightly boring, layout:
-
-    <html>
-    <body>
-        {{ content }}
-    </body>
-    </html>
-
-
-=cut
-
-use strict;
-use warnings;
-
-use Dancer2::Config 'setting';
-
-use Text::Handlebars;
+# ABSTRACT: Text::Handlebars engine for Dancer2
+$Dancer2::Template::Handlebars::VERSION = '0.0.1';
 
 use Moo;
-extends 'Dancer2::Template::Abstract';
+use Carp qw/croak/;
+use Dancer2::Core::Types;
+use Text::Handlebars;
+use File::Spec::Functions qw(abs2rel file_name_is_absolute);
 
-has views_root => (
-    is => 'ro',
-    lazy => 1,
-    default => sub {
-        Dancer2::App->current->setting('views')
-    },
+with 'Dancer2::Core::Role::Template';
+
+has '+default_tmpl_ext' => (
+    default => sub { 'hbs' }
 );
-
+has '+engine' => (
+    isa => InstanceOf['Text::Handlebars']
+);
 has helpers => (
-    is => 'ro',
-    lazy => 1,
+    is      => 'ro',
+    lazy    => 1,
     builder => '_build_helpers',
 );
 
 sub _build_helpers {
     my $self = shift;
-    
     my %helpers;
-
-    if ( my $h = $self->config->{helpers} ) {
-        for my $module ( ref $h ? @$h : $h ) {
-            my %h = eval "use $module; %".$module.'::HANDLEBARS_HELPERS';
-
-            die "couldn't import helper functions from $module: $@" if $@;
-
-            @helpers{ keys %h } = values %h;
-        }
-    }
-
+    #...
     return \%helpers;
 }
 
-has _engine => (
-    is => 'ro',
-    lazy => 1,
-    default => sub {
-        my $self = shift;
-
-        return Text::Handlebars->new(
-            path => [
-                $self->views_root
-            ],
-            %{ $self->config },
-            helpers => $self->helpers,
-        );
-    },
-);
-
-sub gather_helpers {
-    my( $self, $modules ) = @_;
-
-}
-
-
-sub default_tmpl_ext { "hbs" }
-
-sub view {
-    my ($self, $view) = @_;
-
-    return $view if ref $view;
-
-    for my $view_path ($self->_template_name($view)) {
-        return $view_path if -f join '/', $self->views_root, $view_path;
-    }
-
-    # No matching view path was found
-    return;
-}
-
-sub layout {
-    my ($self, $layout, $tokens, $content) = @_;
-
-    my $dir = Dancer2::App->current->setting('views');
-    my( $layout_name ) = grep { -e join '/', $dir, $_ }
-                          map { 'layouts/'.$_ } $self->_template_name($layout);
-
-    my $full_content;
-    if (-e join '/', $dir, $layout_name ) {
-        $full_content = Dancer2::Template->engine->render(
-                                     $layout_name, {%$tokens, content => $content});
-    } else {
-        $full_content = $content;
-        Dancer2::Logger::error("Defined layout ($layout) was not found!");
-    }
-    $full_content;
-}
-
-sub view_exists { 
-    my( $self, $template) = @_;
-
-    # string ref or file
-    return ref($template) || -f join '/', $self->views_root, $template;
-
+sub _build_engine {
+    Text::Handlebars->new( %{ $_[0]->config }, helpers => $_[0]->helpers );
 }
 
 sub render {
-    my ($self, $template, $tokens) = @_;
+    my ( $self, $template, $tokens ) = @_;
 
-    if ( ref $template ) {
-        return $self->_engine->render_string( $$template, $tokens );
-    }
+    ( ref $template || -f $template )
+        or croak "$template is not a regular file or reference.";
 
-    return $self->_engine->render( $template, $tokens );
+    my $content = eval {
+        if (ref $template eq 'SCALAR') {
+            $self->engine->render_string( $$template, $tokens )
+                or die "Could not process template string '$template'";
+        }
+        else {
+            my $rel_path = file_name_is_absolute($template)
+                ? abs2rel($template, $self->config->{location})
+                : $template;
+            $self->engine->render( $rel_path, $tokens )
+                or die "Could not process template file '$template'";
+        }
+    };
 
+    $@ and croak $@;
+
+    return $content;
 }
 
 1;
-
-__END__
